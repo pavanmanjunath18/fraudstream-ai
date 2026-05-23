@@ -8,9 +8,20 @@ const API_BASE =
 
 export const api = axios.create({
   baseURL: API_BASE,
-  timeout: 15_000, // generous timeout — Render free tier cold-starts in ~30s
+  timeout: 45_000, // Render free tier cold-starts take up to 40s
   headers: { "Content-Type": "application/json" },
 });
+
+// Fire a lightweight health ping immediately so Render wakes up
+// before the user actually clicks anything. Call this once on app mount.
+export async function wakeupBackend(): Promise<boolean> {
+  try {
+    await api.get("/api/monitoring/health", { timeout: 45_000 });
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 api.interceptors.request.use((config) => {
   if (typeof window !== "undefined") {

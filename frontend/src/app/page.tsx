@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import {
   Shield, Activity, AlertTriangle, Clock,
   TrendingUp, Cpu, CheckCircle, XCircle,
-  BarChart2, Zap,
+  BarChart2, Zap, Loader2,
 } from "lucide-react";
 import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis,
@@ -12,7 +12,6 @@ import {
 } from "recharts";
 import { fraudApi } from "@/lib/api";
 import { StatCard } from "@/components/ui/StatCard";
-import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { formatPct, formatMs, cn } from "@/lib/utils";
 
 // ── Demo data (falls back when API is cold) ────────────────────────────────
@@ -89,31 +88,43 @@ export default function DashboardPage() {
     queryFn: fraudApi.getRiskDistribution,
   });
 
+  // Always render immediately with demo data — real data replaces it
+  // once Render wakes up. Never block behind a spinner.
   const ov = overview || DEMO_OVERVIEW;
+  const isLive = !!overview;
   const ts = (timeSeries?.length ? timeSeries : DEMO_TIME_SERIES).slice(-24);
   const factors = topFactors?.length ? topFactors : RISK_FACTORS_DEMO;
-
-  if (ovLoading) return <LoadingSpinner />;
 
   return (
     <div className="space-y-6 animate-fade-in">
 
       {/* ── Model health banner ────────────────────────────────────────────── */}
-      <div className="flex items-center justify-between rounded-xl border border-accent/20 bg-accent/5 px-5 py-3">
+      <div className={cn(
+        "flex items-center justify-between rounded-xl border px-5 py-3",
+        isLive ? "border-accent/20 bg-accent/5" : "border-border bg-surface"
+      )}>
         <div className="flex items-center gap-3">
-          <div className={cn(
-            "w-2 h-2 rounded-full",
-            ov.model_healthy ? "bg-success" : "bg-danger"
-          )} />
+          {isLive ? (
+            <div className={cn("w-2 h-2 rounded-full", ov.model_healthy ? "bg-success" : "bg-danger")} />
+          ) : (
+            <Loader2 className="w-3.5 h-3.5 text-text-subtle animate-spin" />
+          )}
           <span className="text-sm font-medium text-text-primary">
-            Model {ov.model_version} · {ov.model_healthy ? "Healthy" : "Degraded"}
+            {isLive
+              ? `Model ${ov.model_version} · ${ov.model_healthy ? "Healthy" : "Degraded"}`
+              : "Connecting to backend…"}
           </span>
-          <span className="text-xs text-text-muted">XGBoost + SHAP explainability active</span>
+          <span className="text-xs text-text-muted">
+            {isLive ? "XGBoost + SHAP explainability active" : "Showing demo data while backend warms up"}
+          </span>
         </div>
         <div className="flex items-center gap-4 text-xs text-text-muted">
           <span>Threshold: 0.50</span>
           <span>High-risk: 0.75</span>
-          <span className="text-accent font-medium">Live scoring ✓</span>
+          {isLive
+            ? <span className="text-accent font-medium">Live scoring ✓</span>
+            : <span className="text-text-subtle">Demo mode</span>
+          }
         </div>
       </div>
 

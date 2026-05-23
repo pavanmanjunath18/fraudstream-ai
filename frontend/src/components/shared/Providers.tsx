@@ -1,7 +1,13 @@
 "use client";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { useState } from "react";
+import { useState, useEffect, createContext, useContext } from "react";
+import { wakeupBackend } from "@/lib/api";
+
+// ── Backend status context ─────────────────────────────────────────────────
+type BackendStatus = "warming" | "live" | "unreachable";
+const BackendCtx = createContext<BackendStatus>("warming");
+export const useBackendStatus = () => useContext(BackendCtx);
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(
@@ -17,7 +23,19 @@ export function Providers({ children }: { children: React.ReactNode }) {
       })
   );
 
+  const [backendStatus, setBackendStatus] = useState<BackendStatus>("warming");
+
+  // Kick off a health ping immediately on mount so Render wakes up
+  // before the user interacts — makes subsequent API calls feel instant.
+  useEffect(() => {
+    wakeupBackend().then((ok) =>
+      setBackendStatus(ok ? "live" : "unreachable")
+    );
+  }, []);
+
   return (
-    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    <BackendCtx.Provider value={backendStatus}>
+      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    </BackendCtx.Provider>
   );
 }

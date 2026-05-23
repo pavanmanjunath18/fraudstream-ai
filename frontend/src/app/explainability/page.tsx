@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid,
@@ -94,17 +94,30 @@ export default function ExplainabilityPage() {
   const [txnInput, setTxnInput] = useState<ScoringRequest>({ ...DEFAULT_TXN });
   const [result, setResult] = useState<any>(null);
   const [scoring, setScoring] = useState(false);
+  const [elapsed, setElapsed] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    if (scoring) {
+      setElapsed(0);
+      timerRef.current = setInterval(() => setElapsed((s) => s + 1), 1000);
+    } else {
+      if (timerRef.current) clearInterval(timerRef.current);
+    }
+    return () => { if (timerRef.current) clearInterval(timerRef.current); };
+  }, [scoring]);
 
   const handleScore = async () => {
     setScoring(true);
     setError(null);
+    setResult(null);
     try {
       const payload = { ...txnInput, transaction_id: `TXN_${uuidv4().replace(/-/g, "").slice(0, 14).toUpperCase()}` };
       const res = await fraudApi.scoreTransaction(payload);
       setResult(res);
     } catch (e: any) {
-      setError(e?.response?.data?.detail || "API unavailable — showing demo result");
+      setError(e?.response?.data?.detail || "Backend timed out — showing demo result");
       setResult(DEMO_RESULT);
     } finally {
       setScoring(false);
@@ -151,6 +164,16 @@ export default function ExplainabilityPage() {
             ))}
           </div>
 
+          {scoring && elapsed >= 5 && (
+            <div className="mt-3 flex items-start gap-2 p-2 rounded-lg bg-surface-2 border border-border">
+              <AlertCircle className="w-3.5 h-3.5 text-text-muted shrink-0 mt-0.5" />
+              <p className="text-xs text-text-muted">
+                Backend is warming up on Render free tier — first request takes ~30s.
+                Hang tight, it's loading your model…
+              </p>
+            </div>
+          )}
+
           {error && (
             <div className="mt-3 flex items-start gap-2 p-2 rounded-lg bg-warning/10 border border-warning/20">
               <AlertCircle className="w-3.5 h-3.5 text-warning shrink-0 mt-0.5" />
@@ -164,7 +187,7 @@ export default function ExplainabilityPage() {
             className="mt-4 w-full flex items-center justify-center gap-2 py-2.5 rounded-lg bg-accent hover:bg-accent-hover text-white text-sm font-medium transition-colors disabled:opacity-50"
           >
             <Play className={cn("w-3.5 h-3.5", scoring && "animate-spin")} />
-            {scoring ? "Scoring…" : "Run Inference"}
+            {scoring ? `Scoring… ${elapsed}s` : "Run Inference"}
           </button>
         </div>
 

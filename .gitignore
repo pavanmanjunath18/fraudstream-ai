@@ -1,0 +1,39 @@
+# ── Python ─────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+env/
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.mypy_cache/
+
+# ── Model artifacts — small enough to track in git (7.8MB total) ────────
+# Uncomment below if switching to DVC / S3 in production:
+# models/*.pkl
+# models/*.json
+# models/xgboost_fraud_v1.*
+
+# ── Synthetic data — regenerate with: python synthetic-data/generate_data.py
+synthetic-data/*.csv
+synthetic-data/dataset_stats.json
+
+# ── Environment ─────────────────────────────────────────────────────────
+.env
+.env.local
+.env.*.local
+
+# ── Node / Next.js ───────────────────────────────────────────────────────
+node_modules/
+frontend/.next/
+frontend/out/
+frontend/.env.local
+
+# ── Docker ───────────────────────────────────────────────────────────────
+*.log
+
+# ── macOS ────────────────────────────────────────────────────────────────
+.DS_Store

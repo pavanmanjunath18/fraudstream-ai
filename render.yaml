@@ -1,0 +1,40 @@
+services:
+  - type: web
+    name: fraudstream-backend
+    runtime: python
+    region: oregon
+    plan: free
+    rootDir: backend
+    buildCommand: pip install --upgrade pip && pip install --no-cache-dir -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /api/monitoring/health
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: MODEL_PATH
+        value: models/xgboost_fraud_v1.pkl
+      - key: MODEL_METADATA_PATH
+        value: models/model_metadata.json
+      - key: SECRET_KEY
+        generateValue: true
+      - key: ALGORITHM
+        value: HS256
+      - key: ACCESS_TOKEN_EXPIRE_MINUTES
+        value: "60"
+      - key: FRAUD_THRESHOLD
+        value: "0.74"
+      - key: HIGH_RISK_THRESHOLD
+        value: "0.75"
+      - key: DATABASE_URL
+        fromDatabase:
+          name: fraudstream-db
+          property: connectionString
+      - key: REDIS_URL
+        sync: false          # Set manually: your Upstash Redis URL
+      - key: ALLOWED_ORIGINS
+        sync: false          # Set manually: https://your-app.vercel.app
+
+databases:
+  - name: fraudstream-db
+    plan: free
+    region: oregon

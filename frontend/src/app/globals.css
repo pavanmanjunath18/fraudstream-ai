@@ -1,0 +1,84 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+:root {
+  --color-bg: #0A0A0F;
+  --color-surface: #12121A;
+  --color-surface-2: #1A1A26;
+  --color-border: #1E1E2E;
+  --color-accent: #6366F1;
+}
+
+* {
+  box-sizing: border-box;
+  padding: 0;
+  margin: 0;
+}
+
+html, body {
+  max-width: 100vw;
+  overflow-x: hidden;
+  background-color: var(--color-bg);
+  color: #E2E8F0;
+  font-family: 'Inter', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: var(--color-surface); }
+::-webkit-scrollbar-thumb { background: #2A2A3E; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--color-accent); }
+
+/* Grid background utility */
+.bg-grid {
+  background-image:
+    linear-gradient(rgba(99,102,241,0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(99,102,241,0.04) 1px, transparent 1px);
+  background-size: 28px 28px;
+}
+
+/* Glass card */
+.glass {
+  background: rgba(18, 18, 26, 0.8);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(30, 30, 46, 0.8);
+}
+
+/* Glow effects */
+.glow-accent {
+  box-shadow: 0 0 20px rgba(99, 102, 241, 0.15);
+}
+.glow-danger {
+  box-shadow: 0 0 20px rgba(239, 68, 68, 0.15);
+}
+.glow-success {
+  box-shadow: 0 0 20px rgba(16, 185, 129, 0.15);
+}
+
+/* Animated gradient text */
+.gradient-text {
+  background: linear-gradient(135deg, #6366F1, #8B5CF6, #EC4899);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Risk level badges */
+.badge {
+  @apply inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium border;
+}
+
+/* Table row hover */
+.table-row-hover:hover {
+  background: rgba(99, 102, 241, 0.04);
+}
+
+/* Pulse dot */
+@keyframes ping-slow {
+  75%, 100% { transform: scale(2); opacity: 0; }
+}
+.ping-slow { animation: ping-slow 2s cubic-bezier(0, 0, 0.2, 1) infinite; }

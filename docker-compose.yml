@@ -1,0 +1,125 @@
+version: "3.9"
+
+services:
+  # ─── PostgreSQL ───────────────────────────────────────────────────────────────
+  postgres:
+    image: postgres:15-alpine
+    container_name: fraudstream_postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-fraudstream}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-fraudstream_dev}
+      POSTGRES_DB: ${POSTGRES_DB:-fraudstream}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init_db.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U fraudstream"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ─── Redis ───────────────────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: fraudstream_redis
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  # ─── Backend (FastAPI) ───────────────────────────────────────────────────────
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: fraudstream_backend
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://fraudstream:fraudstream_dev@postgres:5432/fraudstream
+      REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/1
+      CELERY_RESULT_BACKEND: redis://redis:6379/2
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+      - ./models:/app/models
+      - ./synthetic-data:/app/synthetic-data
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+  # ─── Celery Worker ───────────────────────────────────────────────────────────
+  celery_worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: fraudstream_celery
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://fraudstream:fraudstream_dev@postgres:5432/fraudstream
+      REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/1
+    volumes:
+      - ./backend:/app
+      - ./models:/app/models
+    depends_on:
+      - redis
+      - postgres
+    command: celery -A app.celery_app worker --loglevel=info --concurrency=4
+
+  # ─── Frontend (Next.js) ──────────────────────────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: fraudstream_frontend
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:8000
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+
+  # ─── Prometheus (metrics simulation) ─────────────────────────────────────────
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: fraudstream_prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./scripts/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.retention.time=7d'
+
+  # ─── Grafana ─────────────────────────────────────────────────────────────────
+  grafana:
+    image: grafana/grafana:latest
+    container_name: fraudstream_grafana
+    ports:
+      - "3001:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: fraudstream
+    depends_on:
+      - prometheus
+
+volumes:
+  postgres_data:
+  redis_data:
+  prometheus_data:
+  grafana_data:
